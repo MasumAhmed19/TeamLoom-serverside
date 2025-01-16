@@ -83,11 +83,35 @@ async function run() {
       }
     })
 
-
     // POST ALL USER DATA
     app.post('/add-user', async(req, res)=>{
       const userData = req.body;
-      const result = await employeeCollection.insertOne(userData);
+      const result = await employeeCollection.insertOne({
+        ...userData,
+        timestamp: Date.now(),
+      });
+      res.send(result)
+    })
+
+    // POST ALL USER DATA
+    app.post('/add-user/:email', async(req, res)=>{
+      const email = req.params.email;
+      const userData = req.body;
+      
+      // check if user exists in db
+      const query = {email};
+      const isExist = await employeeCollection.findOne(query)
+
+      // jodi age theke user theke thake
+      if(isExist){ 
+        return res.send(isExist)
+      }
+
+      // jodi na thake
+      const result = await employeeCollection.insertOne({
+        ...userData,
+        timestamp: Date.now(),
+      });
       res.send(result)
     })
 
