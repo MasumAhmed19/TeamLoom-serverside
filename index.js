@@ -51,6 +51,9 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+    const db = client.db("TeamLoom-db");
+    const employeeCollection = db.collection("employee");
+
     // Generate jwt token
     app.post('/jwt', async (req, res) => {
       const email = req.body
@@ -80,6 +83,19 @@ async function run() {
       }
     })
 
+
+    // POST ALL USER DATA
+    app.post('/add-user', async(req, res)=>{
+      const userData = req.body;
+      const result = await employeeCollection.insertOne(userData);
+      res.send(result)
+    })
+
+    // GET ALL USER DATA for admin
+    app.get('/all-employee', async(req, res)=>{
+      const result = await employeeCollection.find().toArray();
+      res.send(result)
+    })
 
 
 
