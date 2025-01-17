@@ -110,6 +110,7 @@ async function run() {
       // jodi na thake
       const result = await employeeCollection.insertOne({
         ...userData,
+        role:'employee',
         timestamp: Date.now(),
       });
       res.send(result)
@@ -120,7 +121,6 @@ async function run() {
       const result = await employeeCollection.find().toArray();
       res.send(result)
     })
-
 
 
     // Send a ping to confirm a successful connection
