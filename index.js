@@ -83,15 +83,15 @@ async function run() {
       }
     })
 
-    // POST ALL USER DATA
-    app.post('/add-user', async(req, res)=>{
-      const userData = req.body;
-      const result = await employeeCollection.insertOne({
-        ...userData,
-        timestamp: Date.now(),
-      });
-      res.send(result)
-    })
+    // // POST ALL USER DATA
+    // app.post('/add-user', async(req, res)=>{
+    //   const userData = req.body;
+    //   const result = await employeeCollection.insertOne({
+    //     ...userData,
+    //     timestamp: Date.now(),
+    //   });
+    //   res.send(result)
+    // })
 
     // POST ALL USER DATA
     app.post('/add-user/:email', async(req, res)=>{
@@ -110,7 +110,7 @@ async function run() {
       // jodi na thake
       const result = await employeeCollection.insertOne({
         ...userData,
-        role:'employee',
+        role:userData?.role || 'employee',
         timestamp: Date.now(),
       });
       res.send(result)
@@ -118,9 +118,37 @@ async function run() {
 
     // GET ALL USER DATA for admin
     app.get('/all-employee', async(req, res)=>{
-      const result = await employeeCollection.find().toArray();
+      const role = req.query.role || ''
+      const query = role ? {role:role} : {}
+      const result = await employeeCollection.find(query).toArray()
       res.send(result)
     })
+
+    // Get employee detail through their email
+    app.get('/employee/:email', async(req, res)=>{
+      const email = req.params.email
+      const query = {'email':email}
+      const result = await employeeCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // Get employee detail through their id
+    app.get('/employee/:id', async(req, res)=>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)}
+      const result = await employeeCollection.find(query).toArray()
+      res.send(result)
+    })
+
+
+    // delete/Fire from job 
+    app.delete('/employee/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await jobsCollection.deleteOne(query)
+      res.send(result)
+    })
+
 
 
     // Send a ping to confirm a successful connection
