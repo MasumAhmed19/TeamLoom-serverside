@@ -133,10 +133,50 @@ async function run() {
     })
 
     // Get employee detail through their id
-    app.get('/employee/:id', async(req, res)=>{
+    app.get('/employee/id/:id', async(req, res)=>{
       const id = req.params.id
       const query = {_id: new ObjectId(id)}
       const result = await employeeCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // Update employee detail through their id
+    app.put('/makehr/:id', async(req, res)=>{
+      const id = req.params.id
+      const query = {_id: new ObjectId(id)};
+      const updateData = {
+        makeHR: true,
+        role: 'hr'
+      }
+      const update = {
+        $set:updateData
+      }
+      const options = {
+        upsert: false
+      } 
+      const result = await employeeCollection.updateOne(query, update, options)
+
+      res.send(result)
+    })
+
+
+    // update salary
+    app.put('/adjust-salary/:id', async(req, res)=>{
+      const id= req.params.id;
+      const {salary}= req.body
+      const query = {_id: new ObjectId(id)};
+      const updatedData = {
+        salary: parseInt(salary)
+      }
+      const update = {
+        $set:updatedData
+      }
+
+      const options = {
+        upsert: false
+      }
+      const result = await employeeCollection.updateOne(query, update, options)
+
       res.send(result)
     })
 
@@ -145,7 +185,7 @@ async function run() {
     app.delete('/employee/:id', async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
-      const result = await jobsCollection.deleteOne(query)
+      const result = await employeeCollection.deleteOne(query)
       res.send(result)
     })
 
