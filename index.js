@@ -53,6 +53,7 @@ async function run() {
   try {
     const db = client.db("TeamLoom-db");
     const employeeCollection = db.collection("employee");
+    const taskCollection = db.collection("tasks")
 
     // Generate jwt token
     app.post('/jwt', async (req, res) => {
@@ -83,7 +84,7 @@ async function run() {
       }
     })
 
-    // // POST ALL USER DATA
+    // POST ALL USER DATA
     // app.post('/add-user', async(req, res)=>{
     //   const userData = req.body;
     //   const result = await employeeCollection.insertOne({
@@ -159,7 +160,6 @@ async function run() {
       res.send(result)
     })
 
-
     // update salary
     app.put('/adjust-salary/:id', async(req, res)=>{
       const id= req.params.id;
@@ -180,12 +180,32 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/role/:email', async (req, res)=>{
+      const email = req.params.email;
+      const query = {email:email}
+      const result = await employeeCollection.findOne(query)
+      res.send({ role: result.role });
+    })
 
     // delete/Fire from job 
-    app.delete('/employee/:id', async (req, res) => {
+    app.delete('/fire/:id', async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await employeeCollection.deleteOne(query)
+      res.send(result)
+    })
+
+
+    app.post('/add-task', async(req, res)=>{
+      const data = req.body;
+      const result = await taskCollection.insertOne(data);
+      res.send(result)
+    })
+
+    app.get('/tasks/:email', async(req, res)=>{
+      const email= req.params.email
+      const query = {'employeeEmail': email}
+      const result = await taskCollection.find(query).toArray();
       res.send(result)
     })
 
