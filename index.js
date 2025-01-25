@@ -209,6 +209,44 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/tasks/:email', async(req, res)=>{
+      const email= req.params.email
+      const query = {'employeeEmail': email}
+      const result = await taskCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.put('/update-task/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const { updatedTask, updatedHours, newDate } = req.body;
+
+      const update = {
+        $set:{
+          task: updatedTask,
+          hoursWorked: updatedHours,
+          date: newDate
+        }
+      }
+
+      const options = {
+        upsert:false
+      }
+      const result = await taskCollection.updateOne(query, update, options)
+
+      res.send(result)
+  
+
+    })
+
+
+    app.delete('/delete-task/:id', async(req, res)=>{
+      const id = req.params;
+      const query = {_id: new ObjectId(id)}
+      const result = await taskCollection.deleteOne(query);
+      res.send(result)
+    })
+
 
 
     // Send a ping to confirm a successful connection
