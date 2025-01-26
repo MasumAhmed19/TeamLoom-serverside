@@ -195,6 +195,30 @@ async function run() {
       res.send(result)
     })
 
+    // API FOR HR
+    app.get('/only-employees', async (req, res)=>{
+        const query = {role: 'employee'}
+        const result = await employeeCollection.find(query).toArray()
+        res.send(result)
+    })
+
+    app.patch('/verify/:id', async (req, res)=>{
+      const id= req.params;
+      const query = {_id: new ObjectId(id)};
+      const user = await employeeCollection.findOne(query);
+
+      const update = {
+        $set: {
+          isVerified: !user.isVerified, 
+        },
+      };
+
+      const result = await employeeCollection.updateOne(query, update);
+
+      res.send(result)
+
+    })
+
 
     app.post('/add-task', async(req, res)=>{
       const data = req.body;
@@ -248,6 +272,11 @@ async function run() {
     })
 
 
+    app.get('/employee/role/:email', async (req, res)=>{
+      const email = req.params.email;
+      const result = await employeeCollection.findOne({email});
+      res.send({role: result?.role})
+    })
 
     // Send a ping to confirm a successful connection
     await client.db('admin').command({ ping: 1 })
