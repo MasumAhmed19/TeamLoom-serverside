@@ -54,6 +54,7 @@ async function run() {
     const db = client.db("TeamLoom-db");
     const employeeCollection = db.collection("employee");
     const taskCollection = db.collection("tasks")
+    const salaryCollection = db.collection("payroll")
 
     // Generate jwt token
     app.post('/jwt', async (req, res) => {
@@ -195,13 +196,16 @@ async function run() {
       res.send(result)
     })
 
-    // API FOR HR
+    // API FOR HR---> TODO: hr middleware
+
+    // Getting All Employee
     app.get('/only-employees', async (req, res)=>{
         const query = {role: 'employee'}
         const result = await employeeCollection.find(query).toArray()
         res.send(result)
     })
 
+    // isVerify value toggling
     app.patch('/verify/:id', async (req, res)=>{
       const id= req.params;
       const query = {_id: new ObjectId(id)};
@@ -218,6 +222,43 @@ async function run() {
       res.send(result)
 
     })
+
+    // payment request
+    app.post('/payment-req', async (req, res)=>{
+      const data = req.body
+      try{
+        const {month, year, employee_id} = data;
+
+        const existingPayment = await salaryCollection.findOne({
+          employee_id:employee_id,
+          month: month,
+          year: year
+        })
+        
+        if(existingPayment){
+          return res.status(400).json({
+            message:"Payment Exists"
+          })
+        }
+
+        const result = await salaryCollection.insertOne(data);
+        res.send(result);
+      }catch(err){
+        res.status(500).json({
+          message:"An error occurred",
+          error: err.message
+        })
+      }
+
+    })
+
+    // get all payroll listings
+    app.get('/all-payment-request', async (req,res)=>{
+      const result = await salaryCollection.find().toArray();
+      res.send(result)
+    })
+
+
 
 
     app.post('/add-task', async(req, res)=>{
