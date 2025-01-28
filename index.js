@@ -61,7 +61,7 @@ async function run() {
     const taskCollection = db.collection("tasks");
     const salaryCollection = db.collection("payroll");
 
-    // verify admin middleware
+    // // verify admin middleware
     const verifyAdmin = async (req, res, next) => {
       // console.log('data from verifyToken middleware--->', req.user?.email)
       const email = req.user?.email;
@@ -148,8 +148,22 @@ async function run() {
       res.send(result);
     });
 
+    // all employee except admin
+    app.get("/allemployees", verifyToken, async (req, res) => {
+      const role = req.query.role || "";
+      // Modify the query to exclude 'admin'
+      const query = role ? { role: role } : { role: { $ne: "admin" } };
+      try {
+        const result = await employeeCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send(error.message);
+      }
+    });
+    
+
     // Get employee detail through their email
-    app.get("/employee/:email", async (req, res) => {
+    app.get("/employee/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await employeeCollection.find(query).toArray();
