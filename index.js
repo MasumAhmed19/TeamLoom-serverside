@@ -12,7 +12,11 @@ const port = process.env.PORT || 9000;
 const app = express();
 // middleware
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://teamloom-a1022.web.app",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
@@ -112,16 +116,6 @@ async function run() {
         res.status(500).send(err);
       }
     });
-
-    // POST ALL USER DATA
-    // app.post('/add-user', async(req, res)=>{
-    //   const userData = req.body;
-    //   const result = await employeeCollection.insertOne({
-    //     ...userData,
-    //     timestamp: Date.now(),
-    //   });
-    //   res.send(result)
-    // })
 
     // POST ALL USER DATA
     app.post("/add-user/:email", async (req, res) => {
@@ -383,15 +377,12 @@ async function run() {
         res.send({ clientSecret: client_secret });
       } catch (error) {
         console.error("Error creating payment intent:", error);
-        res
-          .status(500)
-          .json({
-            message: "Failed to create payment intent",
-            error: error.message,
-          });
+        res.status(500).json({
+          message: "Failed to create payment intent",
+          error: error.message,
+        });
       }
     });
-
 
     // verifyToken, verifyAdmin,
     app.patch("/payment-process", verifyToken, async (req, res) => {
@@ -402,7 +393,7 @@ async function run() {
           $set: {
             isComplete: true,
             status: "Complete",
-            transactionId: transaction_id, 
+            transactionId: transaction_id,
           },
         }
       );
@@ -410,7 +401,63 @@ async function run() {
       res.send(result);
     });
 
+    //1. statistics for admin: Employee Role Distribution (Pie Chart)
+    app.get("/admin-stat", verifyToken, async (req, res) => {
+      // Total HR count
+      const totalHR = await employeeCollection.countDocuments({ role: "hr" });
 
+      // Total Employee count
+      const totalEmployee = await employeeCollection.countDocuments({
+        role: "employee",
+      });
+
+      // Total working hours
+      const totalWorkingHourResult = await taskCollection
+        .aggregate([
+          { $group: { _id: null, totalHours: { $sum: "$hoursWorked" } } },
+          { $project: { _id: 0, totalHours: 1 } },
+        ])
+        .toArray();
+
+      const totalWorkingHour = totalWorkingHourResult[0]?.totalHours || 0;
+
+      // Total salary paid
+      const totalSalaryPaidResult = await salaryCollection
+        .aggregate([
+          { $match: { isComplete: true } },
+          { $group: { _id: null, totalSalary: { $sum: "$payableSalary" } } },
+          { $project: { _id: 0, totalSalary: 1 } },
+        ])
+        .toArray();
+
+      const totalSalaryPaid = totalSalaryPaidResult[0]?.totalSalary || 0;
+
+      const taskOverview = await taskCollection
+        .aggregate([
+          {
+            $group: {
+              _id: "$task", // Group by task name
+              totalHours: { $sum: "$hoursWorked" }, // Sum the hours worked for each task
+            },
+          },
+          {
+            $project: {
+              _id: 0, // Exclude the _id field
+              taskName: "$_id", // Rename _id to taskName
+              totalHours: 1, // Include totalHours in the output
+            },
+          },
+        ])
+        .toArray();
+
+      res.send({
+        totalHR,
+        totalEmployee,
+        totalWorkingHour,
+        totalSalaryPaid,
+        taskOverview,
+      });
+    });
 
     // API for role
     app.get("/employee/role/:email", async (req, res) => {
@@ -420,10 +467,10 @@ async function run() {
     });
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
   }
