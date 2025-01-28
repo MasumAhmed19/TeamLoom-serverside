@@ -6,6 +6,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
 
+const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
+
 const port = process.env.PORT || 9000;
 const app = express();
 // middleware
@@ -54,6 +56,33 @@ async function run() {
     const employeeCollection = db.collection("employee");
     const taskCollection = db.collection("tasks");
     const salaryCollection = db.collection("payroll");
+
+    // verify admin middleware
+    const verifyAdmin = async (req, res, next) => {
+      // console.log('data from verifyToken middleware--->', req.user?.email)
+      const email = req.user?.email;
+      const query = { email };
+      const result = await usersCollection.findOne(query);
+      if (!result || result?.role !== "admin")
+        return res
+          .status(403)
+          .send({ message: "Forbidden Access! Admin Only Actions!" });
+
+      next();
+    };
+
+    const verifyHR = async (req, res, next) => {
+      // console.log('data from verifyToken middleware--->', req.user?.email)
+      const email = req.user?.email;
+      const query = { email };
+      const result = await employeeCollection.findOne(query);
+      if (!result || result?.role !== "hr")
+        return res
+          .status(403)
+          .send({ message: "Forbidden Access! HR Only Actions!" });
+
+      next();
+    };
 
     // Generate jwt token
     app.post("/jwt", async (req, res) => {
@@ -196,10 +225,10 @@ async function run() {
     });
 
     // API FOR HR---> TODO: hr middleware
-
     // Getting All Employee
-    app.get("/only-employees", async (req, res) => {
+    app.get("/only-employees", verifyToken, verifyHR, async (req, res) => {
       const query = { role: "employee" };
+
       const result = await employeeCollection.find(query).toArray();
       res.send(result);
     });
@@ -221,7 +250,7 @@ async function run() {
       res.send(result);
     });
 
-    // payment request
+    // payment request ---> post via HR
     app.post("/payment-req", async (req, res) => {
       const data = req.body;
       try {
@@ -249,7 +278,7 @@ async function run() {
       }
     });
 
-    // get all payroll listings
+    // get all payroll listings----> accessed via admin
     app.get("/all-payment-request", async (req, res) => {
       const result = await salaryCollection.find().toArray();
       res.send(result);
@@ -288,6 +317,7 @@ async function run() {
       res.send(result);
     });
 
+    // task via email
     app.get("/tasks/:email", async (req, res) => {
       const email = req.params.email;
       const query = { employeeEmail: email };
@@ -295,6 +325,7 @@ async function run() {
       res.send(result);
     });
 
+    // task via id
     app.put("/update-task/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -316,12 +347,70 @@ async function run() {
       res.send(result);
     });
 
+    // task delete
     app.delete("/delete-task/:id", async (req, res) => {
       const id = req.params;
       const query = { _id: new ObjectId(id) };
       const result = await taskCollection.deleteOne(query);
       res.send(result);
     });
+
+    // make payment api
+    // create payment intent
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
+      try {
+        const { payableSalary, employee_id, month, year } = req.body;
+
+        const user = await salaryCollection.findOne({
+          employee_id: employee_id,
+          month: month,
+          year: year,
+        });
+
+        // Validation: Ensure necessary fields are provided
+        if (!payableSalary || !employee_id || !user) {
+          return res.status(400).json({ message: "Missing required fields." });
+        }
+
+        const totalSalary = payableSalary * 100;
+        const { client_secret } = await stripe.paymentIntents.create({
+          amount: totalSalary,
+          currency: "usd",
+          automatic_payment_methods: {
+            enabled: true,
+          },
+        });
+        res.send({ clientSecret: client_secret });
+      } catch (error) {
+        console.error("Error creating payment intent:", error);
+        res
+          .status(500)
+          .json({
+            message: "Failed to create payment intent",
+            error: error.message,
+          });
+      }
+    });
+
+
+    // verifyToken, verifyAdmin,
+    app.patch("/payment-process", verifyToken, async (req, res) => {
+      const { employee_id, month, year, transaction_id } = req.body;
+      const result = await salaryCollection.updateOne(
+        { employee_id: employee_id, month: month, year: year },
+        {
+          $set: {
+            isComplete: true,
+            status: "Complete",
+            transactionId: transaction_id, 
+          },
+        }
+      );
+
+      res.send(result);
+    });
+
+
 
     // API for role
     app.get("/employee/role/:email", async (req, res) => {
