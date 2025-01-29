@@ -126,19 +126,26 @@ async function run() {
       const query = { email };
       const isExist = await employeeCollection.findOne(query);
 
-      // jodi age theke user theke thake
-      if (isExist) {
-        return res.send(isExist);
-      }
-
-      // jodi na thake
-      const result = await employeeCollection.insertOne({
-        ...userData,
-        role: userData?.role || "employee",
-        timestamp: Date.now(),
-      });
       res.send(result);
     });
+
+    // Google signIn handle
+    app.post('/goolgle-signIn/:email', async(req, res)=>{
+      const email = req.params.email
+      const query = { email }
+      const user = req.body
+      const isExist = await employeeCollection.findOne(query)
+      if (isExist) {
+        return res.send(isExist)
+      }
+      
+      // na paile DB te add hbe
+      const result = await employeeCollection.insertOne({
+        ...user,
+        timestamp: Date.now(),
+      })
+      res.send(result)
+    })
 
     // GET ALL USER DATA for admin
     app.get("/all-employee", async (req, res) => {
