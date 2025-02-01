@@ -5,8 +5,9 @@ const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const morgan = require("morgan");
-
 const stripe = require("stripe")(process.env.PAYMENT_SECRET_KEY);
+// const admin = require('firebase-admin');
+
 
 const port = process.env.PORT || 9000;
 const app = express();
@@ -126,6 +127,12 @@ async function run() {
       const query = { email };
       const isExist = await employeeCollection.findOne(query);
 
+      // na paile DB te add hbe
+      const result = await employeeCollection.insertOne({
+        ...userData,
+        timestamp: Date.now(),
+      })
+
       res.send(result);
     });
 
@@ -231,8 +238,9 @@ async function run() {
       res.send({ role: result.role });
     });
 
-    // delete/Fire from job
+    // delete/Fire from job TODO: firebase thekew delete krte
     app.delete("/fire/:id", async (req, res) => {
+      // const uid = req.query.uid
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await employeeCollection.deleteOne(query);
