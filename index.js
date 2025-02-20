@@ -301,9 +301,22 @@ async function run() {
       }
     });
 
+    
+
     // get all payroll listings----> accessed via admin
     app.get("/all-payment-request", async (req, res) => {
       const result = await salaryCollection.find().toArray();
+      res.send(result);
+    });
+
+    // get all payroll listings----> accessed via admin
+    app.get("/donepayment/:empid", async (req, res) => {
+      const empid = req.params.empid;
+      const query = {
+        employee_id: empid,
+        isComplete:true,
+      }
+      const result = await salaryCollection.find(query).toArray();
       res.send(result);
     });
 
